@@ -3,6 +3,7 @@ const objectAssignDeep = require('object-assign-deep');
 const data = require('../lib/util/data');
 const settings = require('../lib/util/settings.js');
 const fs = require('../lib/util/fs');
+const utils = require('./utils');
 
 const configurationFile = data.joinPath('configuration.yaml');
 const devicesFile = data.joinPath('devices.yaml');
@@ -16,6 +17,8 @@ describe('Settings', () => {
     const files = new Map();
 
     beforeAll(() => {
+        utils.stubLogger(jest);
+
         jest.spyOn(fs, 'readYaml').mockImplementation((file) => {
             if (files.has(file)) return objectAssignDeep.noMutate(files.get(file));
             throw new Error(`Fake file not found: ${file}`);
@@ -203,12 +206,13 @@ describe('Settings', () => {
             const group = settings.getGroup('1');
             const expected = {
                 friendly_name: '123',
+                devices: [],
             };
 
             expect(group).toStrictEqual(expected);
         });
 
-        it('Should read groups form a separate file', () => {
+        it('Should read groups from a separate file', () => {
             const contentConfiguration = {
                 groups: 'groups.yaml',
             };
@@ -225,6 +229,7 @@ describe('Settings', () => {
             const group = settings.getGroup('1');
             const expected = {
                 friendly_name: '123',
+                devices: [],
             };
 
             expect(group).toStrictEqual(expected);
@@ -239,6 +244,7 @@ describe('Settings', () => {
             const contentGroups = {
                 '1': {
                     friendly_name: '123',
+                    devices: [],
                 },
             };
 
@@ -268,6 +274,7 @@ describe('Settings', () => {
             const group = settings.getGroup('1');
             const expectedGroup = {
                 friendly_name: '123',
+                devices: [],
             };
 
             expect(group).toStrictEqual(expectedGroup);
@@ -280,6 +287,36 @@ describe('Settings', () => {
             };
 
             expect(settings.getDevice('0x1234')).toStrictEqual(expectedDevice2);
+        });
+
+        it('Should add groups', () => {
+            write(configurationFile, {});
+
+            const added = settings.addGroup('test123');
+            const expected = {
+                '1': {
+                    friendly_name: 'test123',
+                },
+            };
+
+            expect(added).toStrictEqual(true);
+            expect(settings.get().groups).toStrictEqual(expected);
+        });
+
+        it('Should not add duplicate groups', () => {
+            write(configurationFile, {});
+
+            const added = settings.addGroup('test123');
+            const added2 = settings.addGroup('test123');
+            const expected = {
+                '1': {
+                    friendly_name: 'test123',
+                },
+            };
+
+            expect(added).toStrictEqual(true);
+            expect(added2).toStrictEqual(false);
+            expect(settings.get().groups).toStrictEqual(expected);
         });
     });
 });

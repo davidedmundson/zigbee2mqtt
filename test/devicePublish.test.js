@@ -26,6 +26,11 @@ const cfg = {
         manufSpec: 0,
         disDefaultRsp: 0,
     },
+    disFeedbackRsp: {
+        manufSpec: 0,
+        disDefaultRsp: 0,
+        disFeedbackRsp: true,
+    },
 };
 
 describe('DevicePublish', () => {
@@ -481,7 +486,7 @@ describe('DevicePublish', () => {
                 'lightingColorCtrl',
                 'moveToColor',
                 'functional',
-                {colorx: 17085, colory: 44000, transtime: 0},
+                {colorx: 17806, colory: 43155, transtime: 0},
                 cfg.default,
                 null,
                 expect.any(Function));
@@ -490,7 +495,7 @@ describe('DevicePublish', () => {
             expect(publishEntityState).toHaveBeenCalledTimes(1);
             expect(publishEntityState).toHaveBeenNthCalledWith(1,
                 '0x00000016',
-                {color: {x: 0.2607, y: 0.6714}});
+                {color: {x: 0.2717, y: 0.6585}});
         });
 
         it('Should publish messages to zigbee devices with color rgb string', async () => {
@@ -505,7 +510,7 @@ describe('DevicePublish', () => {
                 'lightingColorCtrl',
                 'moveToColor',
                 'functional',
-                {colorx: 17085, colory: 44000, transtime: 0},
+                {colorx: 17806, colory: 43155, transtime: 0},
                 cfg.default,
                 null,
                 expect.any(Function));
@@ -514,7 +519,7 @@ describe('DevicePublish', () => {
             expect(publishEntityState).toHaveBeenCalledTimes(1);
             expect(publishEntityState).toHaveBeenNthCalledWith(1,
                 '0x00000017',
-                {color: {x: 0.2607, y: 0.6714}});
+                {color: {x: 0.2717, y: 0.6585}});
         }
         );
 
@@ -725,6 +730,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('my_device_id');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse get topic', () => {
@@ -733,6 +739,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('get');
             expect(parsed.ID).toBe('my_device_id2');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
 
@@ -768,6 +775,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('get');
             expect(parsed.ID).toBe('my_device_id2');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse topic with when deviceID has multiple slashes', () => {
@@ -776,6 +784,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('floor0/basement/my_device_id2');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse topic with when base and deviceID have multiple slashes', () => {
@@ -790,15 +799,26 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('floor0/basement/my_device_id2');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         }
         );
 
-        it('Should parse set with ieeAddr topic', () => {
+        it('Should parse set with attribute topic', () => {
+            const topic = 'zigbee2mqtt/0x12345689/set/foobar';
+            const parsed = devicePublish.parseTopic(topic);
+            expect(parsed.type).toBe('set');
+            expect(parsed.ID).toBe('0x12345689');
+            expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBe('foobar');
+        });
+
+        it('Should parse set with ieeeAddr topic', () => {
             const topic = 'zigbee2mqtt/0x12345689/set';
             const parsed = devicePublish.parseTopic(topic);
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('0x12345689');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse set with postfix topic', () => {
@@ -807,6 +827,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('0x12345689');
             expect(parsed.postfix).toBe('left');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse set with almost postfix topic', () => {
@@ -815,6 +836,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('wohnzimmer.light.wall.right');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse set with postfix topic', () => {
@@ -823,6 +845,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('0x12345689');
             expect(parsed.postfix).toBe('right');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Should parse set with postfix topic', () => {
@@ -831,6 +854,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('0x12345689');
             expect(parsed.postfix).toBe('bottom_left');
+            expect(parsed.attribute).toBeUndefined();
         });
 
         it('Shouldnt parse set with invalid postfix topic', () => {
@@ -839,6 +863,16 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('set');
             expect(parsed.ID).toBe('0x12345689/invalid');
             expect(parsed.postfix).toBe('');
+            expect(parsed.attribute).toBeUndefined();
+        });
+
+        it('Should parse set with postfix topic and attribute', () => {
+            const topic = 'zigbee2mqtt/0x12345689/bottom_left/set/foobar';
+            const parsed = devicePublish.parseTopic(topic);
+            expect(parsed.type).toBe('set');
+            expect(parsed.ID).toBe('0x12345689');
+            expect(parsed.postfix).toBe('bottom_left');
+            expect(parsed.attribute).toBe('foobar');
         });
 
         it('Should parse set with and slashes in base and deviceID postfix topic', () => {
@@ -853,6 +887,7 @@ describe('DevicePublish', () => {
             expect(parsed.type).toBe('get');
             expect(parsed.ID).toBe('my/device/in/basement/sensor');
             expect(parsed.postfix).toBe('bottom_left');
+            expect(parsed.attribute).toBeUndefined();
         }
         );
     });
@@ -896,11 +931,13 @@ describe('DevicePublish', () => {
         expect(zigbee.publish.mock.calls[1][2]).toBe('lightingColorCtrl');
         expect(zigbee.publish.mock.calls[1][3]).toBe('moveToColor');
         await wait(10);
-        expect(zigbee.publish).toHaveBeenCalledTimes(4);
-        expect(zigbee.publish.mock.calls[2][2]).toBe('genLevelCtrl');
+        expect(zigbee.publish).toHaveBeenCalledTimes(5);
+        expect(zigbee.publish.mock.calls[2][2]).toBe('genOnOff');
         expect(zigbee.publish.mock.calls[2][3]).toBe('read');
-        expect(zigbee.publish.mock.calls[3][2]).toBe('lightingColorCtrl');
+        expect(zigbee.publish.mock.calls[3][2]).toBe('genLevelCtrl');
         expect(zigbee.publish.mock.calls[3][3]).toBe('read');
+        expect(zigbee.publish.mock.calls[4][2]).toBe('lightingColorCtrl');
+        expect(zigbee.publish.mock.calls[4][3]).toBe('read');
         expect(publishEntityState).toHaveBeenCalledTimes(2);
         expect(publishEntityState).toHaveBeenNthCalledWith(1,
             '0x00000020',
@@ -1049,7 +1086,11 @@ describe('DevicePublish', () => {
     it('Home Assistant: should set state', async () => {
         zigbee.publish.mockClear();
         publishEntityState.mockClear();
-        jest.spyOn(settings, 'get').mockReturnValue({homeassistant: true, mqtt: {base_topic: 'zigbee2mqtt'}});
+        jest.spyOn(settings, 'get').mockReturnValue({
+            homeassistant: true,
+            mqtt: {base_topic: 'zigbee2mqtt'},
+            advanced: {last_seen: 'disable'},
+        });
         zigbee.getDevice = () => ({modelId: 'RB 185 C'});
         devicePublish.onMQTTMessage('zigbee2mqtt/0x00000001/set', JSON.stringify({state: 'ON'}));
         expect(zigbee.publish).toHaveBeenCalledTimes(1);
@@ -1073,7 +1114,11 @@ describe('DevicePublish', () => {
         zigbee.publish.mockClear();
         publishEntityState.mockClear();
         jest.spyOn(state, 'get').mockReturnValue({state: 'ON'});
-        jest.spyOn(settings, 'get').mockReturnValue({homeassistant: true, mqtt: {base_topic: 'zigbee2mqtt'}});
+        jest.spyOn(settings, 'get').mockReturnValue({
+            homeassistant: true,
+            mqtt: {base_topic: 'zigbee2mqtt'},
+            advanced: {last_seen: 'disable'},
+        });
         zigbee.getDevice = () => ({modelId: 'RB 185 C'});
         devicePublish.onMQTTMessage('zigbee2mqtt/0x00000001/set', JSON.stringify({state: 'ON', color_temp: 100}));
         expect(zigbee.publish).toHaveBeenCalledTimes(1);
@@ -1098,7 +1143,11 @@ describe('DevicePublish', () => {
         zigbee.publish.mockClear();
         publishEntityState.mockClear();
         jest.spyOn(state, 'get').mockReturnValue({state: 'ON'});
-        jest.spyOn(settings, 'get').mockReturnValue({homeassistant: true, mqtt: {base_topic: 'zigbee2mqtt'}});
+        jest.spyOn(settings, 'get').mockReturnValue({
+            homeassistant: true,
+            mqtt: {base_topic: 'zigbee2mqtt'},
+            advanced: {last_seen: 'disable'},
+        });
         zigbee.getDevice = () => ({modelId: 'RB 185 C'});
         devicePublish.onMQTTMessage(
             'zigbee2mqtt/0x00000001/set',
@@ -1126,7 +1175,11 @@ describe('DevicePublish', () => {
         zigbee.publish.mockClear();
         publishEntityState.mockClear();
         jest.spyOn(state, 'get').mockReturnValue({state: 'OFF'});
-        jest.spyOn(settings, 'get').mockReturnValue({homeassistant: true, mqtt: {base_topic: 'zigbee2mqtt'}});
+        jest.spyOn(settings, 'get').mockReturnValue({
+            homeassistant: true,
+            mqtt: {base_topic: 'zigbee2mqtt'},
+            advanced: {last_seen: 'disable'},
+        });
         zigbee.getDevice = () => ({modelId: 'RB 185 C'});
         devicePublish.onMQTTMessage(
             'zigbee2mqtt/0x00000001/set',
@@ -1161,5 +1214,124 @@ describe('DevicePublish', () => {
         expect(publishEntityState).toHaveBeenNthCalledWith(2,
             '0x00000001',
             {color: {x: 0.41, y: 0.25}});
+    });
+
+    it('Should publish message with disFeedbackRsp when set', async () => {
+        zigbee.publish.mockClear();
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'HDC52EastwindFan'});
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify({brightness: '92'}));
+        expect(zigbee.publish).toHaveBeenCalledTimes(1);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(1,
+            '0x00000003',
+            'device',
+            'genLevelCtrl',
+            'moveToLevelWithOnOff',
+            'functional',
+            {level: 92, transtime: 0},
+            cfg.disFeedbackRsp,
+            null,
+            expect.any(Function));
+
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify({state: 'OFF'}));
+        expect(zigbee.publish).toHaveBeenCalledTimes(2);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(2,
+            '0x00000003',
+            'device',
+            'genOnOff',
+            'off',
+            'functional',
+            {},
+            cfg.disFeedbackRsp,
+            null,
+            expect.any(Function));
+    });
+
+    it('Should publish messages to zigbee devices', async () => {
+        jest.spyOn(settings, 'get').mockReturnValue({
+            mqtt: {base_topic: 'zigbee2mqtt'},
+            advanced: {last_seen: 'ISO_8601'},
+        });
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'TRADFRI bulb E27 CWS opal 600lm'});
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000001/set', JSON.stringify({brightness: '200'}));
+        expect(publishEntityState).toHaveBeenCalledTimes(1);
+        expect(typeof publishEntityState.mock.calls[0][1].last_seen).toBe('string');
+    });
+
+    it('HS2WD-E burglar warning', async () => {
+        zigbee.publish.mockClear();
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'WarningDevice'});
+        const payload = {warning: {duration: 100, mode: 'burglar', strobe: true, level: 'high'}};
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify(payload));
+        expect(zigbee.publish).toHaveBeenCalledTimes(1);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(1,
+            '0x00000003',
+            'device',
+            'ssIasWd',
+            'startWarning',
+            'functional',
+            {startwarninginfo: 22, warningduration: 100},
+            cfg.default,
+            null,
+            expect.any(Function));
+    });
+
+    it('HS2WD-E emergency warning', async () => {
+        zigbee.publish.mockClear();
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'WarningDevice'});
+        const payload = {warning: {duration: 10, mode: 'emergency', strobe: false, level: 'very_high'}};
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify(payload));
+        expect(zigbee.publish).toHaveBeenCalledTimes(1);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(1,
+            '0x00000003',
+            'device',
+            'ssIasWd',
+            'startWarning',
+            'functional',
+            {startwarninginfo: 51, warningduration: 10},
+            cfg.default,
+            null,
+            expect.any(Function));
+    });
+
+    it('HS2WD-E emergency without level', async () => {
+        zigbee.publish.mockClear();
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'WarningDevice'});
+        const payload = {warning: {duration: 10, mode: 'emergency', strobe: false}};
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify(payload));
+        expect(zigbee.publish).toHaveBeenCalledTimes(1);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(1,
+            '0x00000003',
+            'device',
+            'ssIasWd',
+            'startWarning',
+            'functional',
+            {startwarninginfo: 49, warningduration: 10},
+            cfg.default,
+            null,
+            expect.any(Function));
+    });
+
+    it('HS2WD-E wrong payload (should use defaults)', async () => {
+        zigbee.publish.mockClear();
+        publishEntityState.mockClear();
+        zigbee.getDevice = () => ({modelId: 'WarningDevice'});
+        const payload = {warning: 'wrong'};
+        devicePublish.onMQTTMessage('zigbee2mqtt/0x00000003/set', JSON.stringify(payload));
+        expect(zigbee.publish).toHaveBeenCalledTimes(1);
+        expect(zigbee.publish).toHaveBeenNthCalledWith(1,
+            '0x00000003',
+            'device',
+            'ssIasWd',
+            'startWarning',
+            'functional',
+            {startwarninginfo: 53, warningduration: 10},
+            cfg.default,
+            null,
+            expect.any(Function));
     });
 });

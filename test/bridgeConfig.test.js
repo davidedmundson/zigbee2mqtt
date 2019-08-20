@@ -4,6 +4,7 @@ const fs = require('../lib/util/fs');
 const objectAssignDeep = require('object-assign-deep');
 const data = require('../lib/util/data');
 const configurationFile = data.joinPath('configuration.yaml');
+const utils = require('./utils');
 
 const mqtt = {
     subscribe: (topic) => {},
@@ -17,6 +18,7 @@ describe('BridgeConfig', () => {
     const files = new Map();
 
     beforeAll(() => {
+        utils.stubLogger(jest);
         jest.spyOn(fs, 'readYaml').mockImplementation((file) => {
             if (files.has(file)) return objectAssignDeep.noMutate(files.get(file));
             throw new Error(`Fake file not found: ${file}`);
@@ -136,5 +138,37 @@ describe('BridgeConfig', () => {
         });
 
         bridgeConfig.onMQTTMessage('zigbee2mqtt/bridge/config/groups', 'whatever');
+    });
+
+    it('Rename device with é', async () => {
+        jest.spyOn(mqtt, 'log').mockImplementation((type, message) => {
+            expect(type).toBe('device_renamed');
+        });
+
+        write(configurationFile, {
+            devices: {
+                '0x12345678': {
+                    friendly_name: 'test123',
+                    retain: false,
+                },
+            },
+        });
+
+        const payload = {
+            old: 'test123',
+            new: 'tést123',
+        };
+
+        bridgeConfig.onMQTTMessage('zigbee2mqtt/bridge/config/rename', JSON.stringify(payload));
+        const expected = {
+            devices: {
+                '0x12345678': {
+                    friendly_name: 'tést123',
+                    retain: false,
+                },
+            },
+        };
+
+        expect(read(configurationFile)).toStrictEqual(expected);
     });
 });
